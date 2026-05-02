@@ -68,6 +68,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         timescaledb-2-postgresql-18 \
         timescaledb-tools \
         postgresql-18-pgvector \
+        libcurl4 \
+        liblz4-1 \
     && apt-get purge -y curl gnupg lsb-release \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
