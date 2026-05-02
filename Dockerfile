@@ -1,4 +1,4 @@
-FROM postgres:18-bookworm
+FROM postgres:18-bookworm AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -44,3 +44,37 @@ RUN git clone --depth 1 --branch "${PGEDGE_VECTORIZER_REF}" \
     && test -s /build-output/pgedge_vectorizer_name.txt \
         || { echo "FATAL: pgedge-vectorizer extension name not detected" >&2; exit 1; } \
     && rm -rf /tmp/pgedge-vectorizer
+
+
+FROM postgres:18-bookworm
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates curl gnupg lsb-release \
+    && curl -fsSL https://packagecloud.io/timescale/timescaledb/gpgkey \
+        | gpg --dearmor -o /usr/share/keyrings/timescaledb.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/timescaledb.gpg] \
+        https://packagecloud.io/timescale/timescaledb/debian/ \
+        $(lsb_release -cs) main" \
+        > /etc/apt/sources.list.d/timescaledb.list \
+    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+        | gpg --dearmor -o /usr/share/keyrings/pgdg.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] \
+        https://apt.postgresql.org/pub/repos/apt/ \
+        $(lsb_release -cs)-pgdg main" \
+        > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
+        timescaledb-2-postgresql-18 \
+        timescaledb-tools \
+        postgresql-18-pgvector \
+    && apt-get purge -y curl gnupg lsb-release \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /build-output/usr/lib/postgresql/18/lib/ \
+                    /usr/lib/postgresql/18/lib/
+COPY --from=builder /build-output/usr/share/postgresql/18/extension/ \
+                    /usr/share/postgresql/18/extension/
+COPY --from=builder /build-output/pgedge_vectorizer_name.txt \
+                    /etc/pgedge_vectorizer_name
