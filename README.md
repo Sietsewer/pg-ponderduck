@@ -16,3 +16,26 @@ Published to `ghcr.io/sietsewer/pg-ponderduck`.
 | [pgedge-vectorizer](https://github.com/pgEdge/pgedge-vectorizer) | main | [Apache 2.0](https://github.com/pgEdge/pgedge-vectorizer/blob/main/LICENSE) |
 
 **Note on TimescaleDB:** The TSL permits unrestricted use for internal and development purposes. It restricts offering TimescaleDB as a managed database service to third parties. See the [license](https://github.com/timescale/timescaledb/blob/main/tsl/LICENSE-TIMESCALE) for full terms.
+
+## Enabling extensions
+
+The image ships the extension files but applies no PostgreSQL configuration. You must wire up `shared_preload_libraries` and run `CREATE EXTENSION` yourself.
+
+**TimescaleDB** and **pg_duckdb** must be added to `shared_preload_libraries` before their extensions can be created — PostgreSQL won't load them on demand:
+
+```
+shared_preload_libraries = 'timescaledb,pg_duckdb'
+```
+
+**pgvector** and **pgedge-vectorizer** do not require preloading.
+
+After restarting with the updated config:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS timescaledb;
+CREATE EXTENSION IF NOT EXISTS pg_duckdb;
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS <pgedge_vectorizer_name>;
+```
+
+The pgedge-vectorizer SQL name is not fixed upstream. The actual name discovered at build time is written to `/etc/pgedge_vectorizer_name` — read that file rather than hardcoding it.
